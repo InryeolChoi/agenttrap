@@ -49,5 +49,7 @@ def services(monkeypatch):
         monkeypatch.setenv("DAYTONA_API_KEY", "test-only")
         monkeypatch.setenv("NOSANA_API_KEY", "test-only")
         monkeypatch.delenv("NOSANA_MODEL", raising=False)
+        monkeypatch.delenv("NOSANA_BASE_URL", raising=False)
+        monkeypatch.delenv("NOSANA_ENDPOINT_KEY", raising=False)
         return state
     return configure
