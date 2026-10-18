@@ -122,9 +122,9 @@ Baseline과 Attack은 같은 모델을 사용합니다. Sandbox는 외부 네트
 
 | 담당 | 브랜치 | 수정 파일 |
 | --- | --- | --- |
-| Developer A | `feat/runtime` | `runtime.py`, `nosana_client.py` |
+| Developer A | `feat/runtime` | `runtime.py`, `nosana_client.py`, `tests/test_nosana_client.py` |
 | Developer B | `feat/game` | `app.py`, `tests/test_app.py` |
-| 통합 담당 | `feat/runtime`에서 준비 후 `main` 통합 | `game_engine.py`, 통합 테스트, 의존성, 공통 문서 |
+| 통합 담당 | `feat/runtime`에서 준비 후 `main` 통합 | 게임 엔진·CLI, Developer A/B 소유를 제외한 core 테스트, 의존성, 공통 문서 |
 
 Judge와 시나리오 계약은 고정되어 있습니다. 공유 인터페이스를 바꿔야 하면 변경안을 먼저 전달하세요. 테스트한 변경을 각자 브랜치에 올리고 통합 담당자가 `main`에 반영합니다.
 
