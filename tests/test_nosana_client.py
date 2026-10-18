@@ -166,7 +166,9 @@ def test_infer_disables_thinking_and_uses_default_endpoint(monkeypatch):
     nosana_client.infer([], model="model")
 
     assert captured["base_url"] == nosana_client.BASE_URL
-    assert client.create_kwargs["extra_body"] == {"chat_template_kwargs": {"enable_thinking": False}}
+    assert client.create_kwargs["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": False}, "reasoning_effort": "none",
+    }
     assert client.create_kwargs["max_tokens"] >= 1000
 
 
