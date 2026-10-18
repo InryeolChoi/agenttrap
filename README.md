@@ -19,7 +19,7 @@
 - 프로젝트 전용 `.venv`, pytest, Claude Code 인수인계 스크립트
 - 키 상태 점검, 모델 목록, Daytona Hello World, 게임 JSON 실행용 CLI
 
-Streamlit UI는 친구가 `feat/game`에서 구현합니다. 실제 Nosana 추론과 Daytona 실행은 API 키 설정 후 검증해야 합니다. 자동 테스트의 서비스 대역은 실제 서비스 실행 증거가 아닙니다.
+Streamlit UI는 친구가 `feat/game`에서 구현합니다. 실제 Nosana 추론·Daytona 실행으로 정상 입력과 공격 입력을 검증했고, [실행 기록](docs/evidence/2026-10-18/README.md)에 결과를 남겼습니다. UI 전체 통합은 아직 진행 중입니다. 자동 테스트의 서비스 대역과 실제 서비스 기록은 구별합니다.
 
 ## 실행 구조
 
@@ -122,9 +122,9 @@ Baseline과 Attack은 같은 모델을 사용합니다. Sandbox는 외부 네트
 
 | 담당 | 브랜치 | 수정 파일 |
 | --- | --- | --- |
-| Developer A | `feat/runtime` | `runtime.py`, `nosana_client.py` |
+| Developer A | `feat/runtime` | `runtime.py`, `nosana_client.py`, `tests/test_nosana_client.py` |
 | Developer B | `feat/game` | `app.py`, `tests/test_app.py` |
-| 통합 담당 | `feat/runtime`에서 준비 후 `main` 통합 | `game_engine.py`, 통합 테스트, 의존성, 공통 문서 |
+| 통합 담당 | `feat/runtime`에서 준비 후 `main` 통합 | 게임 엔진·CLI, Developer A/B 소유를 제외한 core 테스트, 의존성, 공통 문서 |
 
 Judge와 시나리오 계약은 고정되어 있습니다. 공유 인터페이스를 바꿔야 하면 변경안을 먼저 전달하세요. 테스트한 변경을 각자 브랜치에 올리고 통합 담당자가 `main`에 반영합니다.
 

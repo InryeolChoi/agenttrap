@@ -150,9 +150,9 @@ UI는 이 함수를 실행 버튼 클릭 시에만 호출한다. 기존 필드�
 
 | 담당 | 브랜치 | 수정 범위 |
 | --- | --- | --- |
-| 우리: Developer A | `feat/runtime` | `runtime.py`, `nosana_client.py` |
+| 우리: Developer A | `feat/runtime` | `runtime.py`, `nosana_client.py`, `tests/test_nosana_client.py` |
 | 친구: Developer B | `feat/game` | `app.py`, `tests/test_app.py` |
-| 통합 담당: 우리 | 통합 브랜치에서 준비 후 `main` 반영 | 게임 엔진, 통합 테스트, 의존성, 공통 문서 |
+| 통합 담당: 우리 | 통합 브랜치에서 준비 후 `main` 반영 | 게임 엔진·CLI, Developer A/B 소유를 제외한 core 테스트, 의존성, 공통 문서 |
 
 Judge·시나리오와 위 계약은 공통 기준으로 고정한다. 변경이 필요하면 통합 담당에게 요청한다. 각자 별도 clone/worktree를 사용하고 다른 사람의 미커밋 변경, 브랜치, 파일을 덮어쓰지 않는다. force push와 기존 브랜치 삭제는 금지한다.
 

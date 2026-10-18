@@ -1,0 +1,7 @@
+{
+  "mode": "nosana_models_only",
+  "models": [
+    "qwen/qwen3.8-27b",
+    "nvidia/nemotron-3-embed-1b"
+  ]
+}
