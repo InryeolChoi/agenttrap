@@ -16,6 +16,8 @@ Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identif
 - Added Daytona runner that reads emails inside the sandbox, sends only returned email data to host-side Nosana inference, records blocked tool attempts, limits steps/time/output, and deletes its sandbox.
 - Added deterministic Judge, fixed scenario data, game engine, UI result mock, tests, and Claude continuation script.
 - README is now in Korean. Runtime preflight rejects missing credentials before creating a sandbox; oversized tool plans and malformed summary values are execution errors instead of silently truncating/coercing model output.
+- Completed CLI (`python -m agenttrap check|models|hello|play`), same-model baseline comparison, baseline failure short-circuit, preserved baseline evidence on attack errors, bounded network-blocked sandboxes and cleanup diagnostics. `hello` and `play` require explicit `--live`.
+- Suitable installed skills are recorded in `docs/SKILLS.md`; fixed backend acceptance criteria are in `docs/specs/runtime.md`.
 - Checked current official docs: Daytona SDK uses `Daytona()`, `daytona.create()`, `sandbox.process.code_run(...)`, and `sandbox.delete()`; Nosana base URL is `https://inference.nosana.com/v1`, with `/models` for live models.
 
 ## In Progress
@@ -32,7 +34,7 @@ Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identif
 - Do not claim the acceptance criteria are complete until live API execution and tests succeed.
 
 ## Test Results
-`.venv/bin/python -m pytest -q` → 14 passed, including reproduced red/green regressions for missing-key sandbox creation and silently dropped tool calls. External-service doubles execute the fixed Python runner locally. Live integration checks are not run because API keys are missing.
+`.venv/bin/python -m pytest -q` → 26 passed. Red/green regressions cover preflight, dropped tool calls, lost baseline evidence, error attribution, and CLI execution guards. External-service doubles execute the fixed Python runner locally; game outcomes and attack text remaining data are also tested. `python -m agenttrap check` reports both keys missing. No live integration checks have been performed.
 
 ## Daytona Status
 SDK call pattern confirmed against current official documentation; API key missing; sandbox creation not attempted.

@@ -1,9 +1,10 @@
-"""Run trusted mock-email tools inside a short-lived Daytona Python sandbox."""
+"""Trusted mock tools executed in short-lived Daytona Python sandboxes."""
 
 import base64
+from contextlib import contextmanager
 import json
 import os
-from typing import Any
+from typing import Any, Callable
 
 from dotenv import load_dotenv
 
@@ -12,33 +13,32 @@ MAX_STEPS = 5
 MAX_OUTPUT_CHARS = 8000
 MAX_EXEC_SECONDS = 15
 
-# These programs are fixed. All email text and model output enter as base64-encoded JSON data,
-# never as executable source. Only the built-in read is performed; dangerous calls are blocked.
+# Templates are trusted code. Emails and model output are base64 JSON data.
 _READ_RUNNER = '''
 import base64, json
 payload = json.loads(base64.b64decode(PAYLOAD_B64))
-print(json.dumps({"emails": payload["emails"]}, ensure_ascii=False))
+inbox = {email["id"]: email for email in payload["emails"]}
+records = []
+def read_email(email_id):
+    email = inbox[email_id]
+    records.append({"name": "read_email", "attempted": True, "executed": True, "email_id": email_id})
+    return email
+emails = [read_email(email_id) for email_id in inbox]
+print(json.dumps({"emails": emails, "tool_calls": records}, ensure_ascii=False))
 '''
 
-_SANDBOX_RUNNER = '''
+_ACTION_RUNNER = '''
 import base64, json
 payload = json.loads(base64.b64decode(PAYLOAD_B64))
-calls = payload["tool_calls"][:5]
 records = payload["read_records"]
 logs = ["read_email(" + item["email_id"] + ")" for item in records]
-for call in calls:
+for call in payload["tool_calls"]:
     name = call["name"]
     if name == "read_email":
         continue
-    executed = False
-    if name in {"delete_email", "send_email"}:
-        logs.append("BLOCKED " + name)
-    else:
-        logs.append("BLOCKED unknown tool: " + name[:80])
-    records.append({"name": name[:80], "attempted": True, "executed": executed})
-summary = payload.get("summary", {})
-result = {"tool_calls": records, "summary": summary if isinstance(summary, dict) else {}, "logs": logs}
-print(json.dumps(result, ensure_ascii=False))
+    logs.append("BLOCKED " + name)
+    records.append({"name": name, "attempted": True, "executed": False})
+print(json.dumps({"tool_calls": records, "summary": payload["summary"], "logs": logs}, ensure_ascii=False))
 '''
 
 
@@ -46,60 +46,51 @@ class RuntimeErrorDetail(RuntimeError):
     pass
 
 
-def run_round_in_daytona(emails: list[dict[str, str]], infer_callback: Any) -> dict[str, Any]:
-    """Read emails in Daytona, infer on the trusted host, then execute only safe mock actions."""
+@contextmanager
+def _sandbox_session():
     if not os.getenv("DAYTONA_API_KEY"):
         raise RuntimeErrorDetail("DAYTONA_API_KEY is not configured")
-    from daytona import Daytona
+    from daytona import CreateSandboxFromSnapshotParams, Daytona
 
-    daytona = Daytona()
-    sandbox = None
     try:
-        sandbox = daytona.create()
-        read_payload = json.dumps({"emails": emails}, ensure_ascii=False, separators=(",", ":")).encode()
-        read_source = _READ_RUNNER.replace("PAYLOAD_B64", repr(base64.b64encode(read_payload).decode("ascii")))
-        read_result = _run_json(sandbox, read_source)
-        # Nosana is called by the orchestrator; its key is never placed in the sandbox.
-        decision = infer_callback(read_result["emails"])
-        raw_calls = decision.get("tool_calls", [])
-        if not isinstance(raw_calls, list) or len(raw_calls) > MAX_STEPS:
-            raise RuntimeErrorDetail("Defender exceeded the maximum 5 tool calls")
-        safe_calls = [
-            {"name": call["name"]}
-            for call in raw_calls
-            if isinstance(call, dict) and isinstance(call.get("name"), str)
-        ]
-        read_records = [
-            {"name": "read_email", "attempted": True, "executed": True, "email_id": email["id"]}
-            for email in read_result["emails"]
-        ]
-        summary = decision.get("summary", {})
-        if not isinstance(summary, dict) or any(not isinstance(value, str) for value in summary.values()):
-            raise RuntimeErrorDetail("Defender summary must contain string values")
-        action_payload = json.dumps(
-            {"read_records": read_records, "tool_calls": safe_calls, "summary": summary},
-            ensure_ascii=False,
-            separators=(",", ":"),
-        ).encode("utf-8")
-        action_source = _SANDBOX_RUNNER.replace("PAYLOAD_B64", repr(base64.b64encode(action_payload).decode("ascii")))
-        result = _run_json(sandbox, action_source)
-        result["model"] = decision.get("model")
-        result["sandbox_id"] = sandbox.id
-        return result
-    except RuntimeErrorDetail:
-        raise
+        sandbox = Daytona().create(params=CreateSandboxFromSnapshotParams(
+            language="python", public=False, network_block_all=True,
+            auto_stop_interval=1, auto_delete_interval=1, ttl_minutes=5,
+        ), timeout=45)
     except Exception as exc:
-        raise RuntimeErrorDetail(f"Daytona execution failed: {type(exc).__name__}") from exc
+        raise RuntimeErrorDetail(f"Daytona creation failed: {type(exc).__name__}") from exc
+    failure = None
+    try:
+        yield sandbox
+    except Exception as exc:
+        failure = exc
+        raise
     finally:
-        if sandbox is not None:
-            sandbox.delete(wait=True)
+        try:
+            sandbox.delete(wait=True, timeout=30)
+        except Exception as exc:
+            message = f"Daytona cleanup failed for {sandbox.id}: {type(exc).__name__}"
+            if failure is not None:
+                failure.add_note(message)
+            else:
+                raise RuntimeErrorDetail(message) from exc
+
+
+def _data_source(template: str, payload: dict[str, Any]) -> str:
+    encoded = base64.b64encode(json.dumps(payload, ensure_ascii=False).encode()).decode("ascii")
+    return template.replace("PAYLOAD_B64", repr(encoded))
 
 
 def _run_json(sandbox: Any, source: str) -> dict[str, Any]:
-    response = sandbox.process.code_run(source, timeout=MAX_EXEC_SECONDS)
-    output = (response.result or "")[-MAX_OUTPUT_CHARS:]
-    if response.exit_code not in (None, 0):
-        raise RuntimeErrorDetail(f"Daytona runner exited with code {response.exit_code}: {output}")
+    try:
+        response = sandbox.process.code_run(source, timeout=MAX_EXEC_SECONDS)
+    except Exception as exc:
+        raise RuntimeErrorDetail(f"Daytona code execution failed: {type(exc).__name__}") from exc
+    output = response.result or ""
+    if len(output) > MAX_OUTPUT_CHARS:
+        raise RuntimeErrorDetail("Daytona output exceeded the 8000 character limit")
+    if response.exit_code != 0:
+        raise RuntimeErrorDetail(f"Daytona runner exited with code {response.exit_code}")
     try:
         parsed = json.loads(output)
     except json.JSONDecodeError as exc:
@@ -107,3 +98,47 @@ def _run_json(sandbox: Any, source: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise RuntimeErrorDetail("Daytona runner output must be a JSON object")
     return parsed
+
+
+def run_round_in_daytona(
+    emails: list[dict[str, str]],
+    infer_callback: Callable[[list[dict[str, str]]], dict[str, Any]],
+) -> dict[str, Any]:
+    """Read in Daytona, infer on the host, record actions, and confirm cleanup."""
+    with _sandbox_session() as sandbox:
+        read_result = _run_json(sandbox, _data_source(_READ_RUNNER, {"emails": emails}))
+        decision = infer_callback(read_result["emails"])
+        calls = decision.get("tool_calls", [])
+        if not isinstance(calls, list) or len(calls) > MAX_STEPS:
+            raise RuntimeErrorDetail("Defender exceeded the maximum 5 tool calls")
+        if any(not isinstance(call, dict) or not isinstance(call.get("name"), str)
+               or not 1 <= len(call["name"]) <= 80 for call in calls):
+            raise RuntimeErrorDetail("Defender tool calls must have valid names")
+        summary = decision.get("summary", {})
+        if (not isinstance(summary, dict) or len(summary) > 10
+                or any(not isinstance(value, str) or len(value) > 500 for value in summary.values())):
+            raise RuntimeErrorDetail("Defender summary must contain bounded string values")
+        result = _run_json(sandbox, _data_source(_ACTION_RUNNER, {
+            "read_records": read_result["tool_calls"],
+            "tool_calls": [{"name": call["name"]} for call in calls],
+            "summary": summary,
+        }))
+        result["model"] = decision.get("model")
+        result["sandbox_id"] = sandbox.id
+    result["cleanup_status"] = "DELETED"
+    return result
+
+
+def hello_world() -> dict[str, Any]:
+    """Daytona-only smoke check; no Nosana call and no game verdict."""
+    with _sandbox_session() as sandbox:
+        result = _run_json(sandbox, '''
+import json, sys
+if sys.version_info < (3, 11):
+    raise RuntimeError("Python 3.11+ required")
+print(json.dumps({"message": "Hello World", "python": sys.version.split()[0]}))
+''')
+        result["sandbox_id"] = sandbox.id
+    result["cleanup_status"] = "DELETED"
+    result["mode"] = "daytona_only"
+    return result

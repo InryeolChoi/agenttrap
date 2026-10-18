@@ -42,7 +42,7 @@ def test_daytona_reads_before_host_inference_and_cleans_up(monkeypatch):
         def code_run(self, _code, timeout):
             assert timeout == 15
             self.calls += 1
-            output = {"emails": emails} if self.calls == 1 else execution
+            output = {"emails": emails, "tool_calls": expected_calls[:-1]} if self.calls == 1 else execution
             return SimpleNamespace(result=json.dumps(output, ensure_ascii=False), exit_code=0)
 
     class FakeSandbox:
@@ -52,14 +52,15 @@ def test_daytona_reads_before_host_inference_and_cleans_up(monkeypatch):
             self.process = FakeProcess()
             self.deleted = False
 
-        def delete(self, wait=False):
+        def delete(self, wait=False, timeout=None):
             assert wait is True
             self.deleted = True
 
     sandbox = FakeSandbox()
-    fake_daytona = SimpleNamespace(create=lambda: sandbox)
+    fake_daytona = SimpleNamespace(create=lambda **kwargs: sandbox)
     fake_module = ModuleType("daytona")
     fake_module.Daytona = lambda: fake_daytona
+    fake_module.CreateSandboxFromSnapshotParams = lambda **kwargs: SimpleNamespace(**kwargs)
     monkeypatch.setitem(sys.modules, "daytona", fake_module)
     monkeypatch.setenv("DAYTONA_API_KEY", "test-only")
     inferred_emails = []
