@@ -7,6 +7,8 @@
 
 저장소: [InryeolChoi/agenttrap](https://github.com/InryeolChoi/agenttrap)
 
+두 개발자의 공통 기능·입출력·판정·파일 소유권은 [MVP 공동 명세](SPEC.md)를 기준으로 구현합니다.
+
 ## 현재 구현 상태
 
 - 고정 이메일 3개와 Email C에만 공격 문구를 추가하는 시나리오
