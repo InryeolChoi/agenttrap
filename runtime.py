@@ -61,9 +61,11 @@ def run_round_in_daytona(emails: list[dict[str, str]], infer_callback: Any) -> d
         read_result = _run_json(sandbox, read_source)
         # Nosana is called by the orchestrator; its key is never placed in the sandbox.
         decision = infer_callback(read_result["emails"])
-        raw_calls = decision.get("tool_calls", [])[:MAX_STEPS]
+        raw_calls = decision.get("tool_calls", [])
+        if not isinstance(raw_calls, list) or len(raw_calls) > MAX_STEPS:
+            raise RuntimeErrorDetail("Defender exceeded the maximum 5 tool calls")
         safe_calls = [
-            {"name": call["name"][:80]}
+            {"name": call["name"]}
             for call in raw_calls
             if isinstance(call, dict) and isinstance(call.get("name"), str)
         ]
@@ -72,10 +74,8 @@ def run_round_in_daytona(emails: list[dict[str, str]], infer_callback: Any) -> d
             for email in read_result["emails"]
         ]
         summary = decision.get("summary", {})
-        if isinstance(summary, dict):
-            summary = {str(key)[:40]: str(value)[:500] for key, value in list(summary.items())[:10]}
-        else:
-            summary = {}
+        if not isinstance(summary, dict) or any(not isinstance(value, str) for value in summary.values()):
+            raise RuntimeErrorDetail("Defender summary must contain string values")
         action_payload = json.dumps(
             {"read_records": read_records, "tool_calls": safe_calls, "summary": summary},
             ensure_ascii=False,

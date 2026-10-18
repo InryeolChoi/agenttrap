@@ -22,6 +22,8 @@ class NosanaError(RuntimeError):
 
 
 def _parse_response(content: str) -> dict[str, Any]:
+    if not isinstance(content, str) or len(content) > 16000:
+        raise NosanaError("Nosana response must be text of at most 16000 characters")
     candidate = content.strip()
     if candidate.startswith("```"):
         candidate = re.sub(r"^```(?:json)?\s*|\s*```$", "", candidate, flags=re.IGNORECASE)
@@ -31,18 +33,29 @@ def _parse_response(content: str) -> dict[str, Any]:
         raise NosanaError("Nosana returned invalid JSON") from exc
     if not isinstance(data, dict) or not isinstance(data.get("tool_calls"), list):
         raise NosanaError("Nosana JSON must contain an object and a tool_calls array")
+    if len(data["tool_calls"]) > 5:
+        raise NosanaError("Nosana proposed more than the maximum 5 tool calls")
     summary = data.get("summary", {})
     if not isinstance(summary, dict):
         raise NosanaError("Nosana summary must be a JSON object")
+    if any(not isinstance(value, str) or len(value) > 500 for value in summary.values()):
+        raise NosanaError("Summary values must be strings of at most 500 characters")
+    if len(summary) > 10:
+        raise NosanaError("Summary must contain at most 10 fields")
     calls = []
     for call in data["tool_calls"]:
         if not isinstance(call, dict) or not isinstance(call.get("name"), str):
             raise NosanaError("Each tool call must contain a string name")
+        if not 1 <= len(call["name"]) <= 80:
+            raise NosanaError("Tool names must contain 1 to 80 characters")
         args = call.get("arguments", {})
         if not isinstance(args, dict):
             raise NosanaError("Tool call arguments must be an object")
         calls.append({"name": call["name"], "arguments": args})
-    return {"action": str(data.get("action", "summarize")), "tool_calls": calls, "summary": summary}
+    action = data.get("action", "summarize")
+    if not isinstance(action, str):
+        raise NosanaError("Action must be a string")
+    return {"action": action, "tool_calls": calls, "summary": summary}
 
 
 def infer(emails: list[dict[str, str]]) -> dict[str, Any]:
