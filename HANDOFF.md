@@ -52,7 +52,17 @@
 
 ## Nosana Status
 
-실제 모델 `qwen/qwen3.8-27b`로 정상 및 공격 입력의 추론을 확인했다. 검증된 모델을 로컬 `.env`의 빈 `NOSANA_MODEL`에 설정했다. 키는 로컬에만 있으며 출력하거나 Git에 넣지 않았다. 사용자가 키 설정과 실제 연결 검증 진행을 승인했다.
+기존 실제 실행 기록은 공용 API의 `qwen/qwen3.8-27b` 기준이며, 사용자가 지정한 GLM 배포 검증으로 간주하지 않는다.
+
+사용자가 제공한 개별 배포 주소는 `https://5y6PnsadFo6hf1qAa99W9wbCXLmJc4m3e9sRcRZnRThk.node.k8s.prd.nos.ci`다. 로컬 `.env`의 `NOSANA_BASE_URL`을 해당 주소 + `/v1`로, `NOSANA_MODEL`을 `glm-4.7-flash:q4_K_M`으로 변경했다. `/v1` 경로와 실제 모델 목록은 배포 준비 후 확인해야 한다. 2026-10-18 연결 확인에서는 `/v1/models`가 HTTP 503 및 `x-frp-service-state: loading`을 반환했다. GLM 추론과 게임 재검증은 아직 완료하지 못했다.
+
+어댑터가 환경변수의 엔드포인트와 GLM 모델명을 전달하는 회귀 테스트를 실패 확인 후 구현했다. 키는 변경하거나 출력하지 않았다. 배포가 준비되면 모델 목록 조회 → GLM 추론 → 실제 한 판 순서로 재검증한다.
+
+추가 확인: 사용자가 `.env`를 수정한 뒤 공용 API 모델 목록 조회는 성공했으나 GLM 추론은 `NotFoundError`였다. 당시 주소는 공용 API, 모델명은 GLM으로 서로 맞지 않았다.
+
+## Presentation Materials
+
+`docs/presentation/README.md`에 최신 로고 포함 PPT, 3분 대본, 오프라인 데모 사용법이 있다. 데모는 기존 Qwen 실제 기록 재생과 고정 Mock 시뮬레이션을 명시적으로 구분하며 API를 호출하지 않는다. Nosana 엔드포인트 설정 지원 추가 후 전체 테스트는 55개 통과했다.
 
 ## Next Actions
 

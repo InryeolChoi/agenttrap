@@ -63,7 +63,8 @@ def _client() -> OpenAI:
     api_key = os.getenv("NOSANA_API_KEY")
     if not api_key:
         raise NosanaError("NOSANA_API_KEY is not configured")
-    return OpenAI(base_url=BASE_URL, api_key=api_key, timeout=30.0, max_retries=0)
+    return OpenAI(base_url=os.getenv("NOSANA_BASE_URL") or BASE_URL,
+                  api_key=api_key, timeout=30.0, max_retries=0)
 
 
 def list_models() -> list[str]:
