@@ -42,6 +42,7 @@ def services(monkeypatch):
             return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
         monkeypatch.setattr(nosana_client, "OpenAI", lambda **kwargs: SimpleNamespace(
+            close=lambda: None,
             models=SimpleNamespace(list=lambda: SimpleNamespace(data=[SimpleNamespace(id="test-model")])),
             chat=SimpleNamespace(completions=SimpleNamespace(create=completion)),
         ))

@@ -8,6 +8,7 @@
 ```text
 너는 AgentTrap의 Developer B다. 목표는 기존 게임 엔진을 사용하는 Streamlit UI 구현이다.
 저장소: https://github.com/InryeolChoi/agenttrap
+담당 이슈: https://github.com/InryeolChoi/agenttrap/issues/3 (선행 이슈 없이 시작 가능)
 
 먼저 AGENTS.md, HANDOFF.md, README.md를 읽고 git status --short --branch를 확인하라.
 
