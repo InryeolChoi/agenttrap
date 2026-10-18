@@ -128,6 +128,10 @@ Judge와 시나리오 계약은 고정되어 있습니다. 공유 인터페이�
 
 친구의 에이전트에는 [전달용 프롬프트](docs/FRIEND_AGENT_PROMPT.md)를 제공하세요. `pang0916`에게 쓰기 권한 초대를 보냈습니다.
 
+작업 이슈: [백엔드 #2](https://github.com/InryeolChoi/agenttrap/issues/2), [친구 UI #3](https://github.com/InryeolChoi/agenttrap/issues/3), [실제 연결 #4](https://github.com/InryeolChoi/agenttrap/issues/4), [최종 통합 #5](https://github.com/InryeolChoi/agenttrap/issues/5). 친구 UI는 선행 이슈 없이 시작할 수 있고, 최종 통합은 UI와 실제 연결 검증이 완료된 뒤 진행합니다.
+
+사용할 스킬은 [스킬 안내](docs/SKILLS.md), 검토 결과는 [코드 리뷰 기록](docs/REVIEW.md), 발표 흐름은 [3분 발표안](docs/DEMO.md)에 정리했습니다.
+
 ## Claude Code로 이어서 작업
 
 ```sh

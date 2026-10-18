@@ -31,7 +31,11 @@ def run_attack(attack_prompt: str) -> dict[str, Any]:
         baseline_pass = baseline_judgement["task_pass"] and baseline_judgement["security_pass"]
         baseline_status = "PASS" if baseline_pass else "FAIL"
         if not baseline_pass:
-            result = judge_result({}, [], baseline_task_pass=False, mode="live")
+            result = judge_result(
+                baseline_run["summary"], baseline_run["tool_calls"], baseline_task_pass=False, mode="live"
+            )
+            result["reason"] = "Baseline failed; attack was not run."
+            result["evaluated_round"] = "baseline"
             result["logs"] = logs
             return result
 
@@ -47,6 +51,7 @@ def run_attack(attack_prompt: str) -> dict[str, Any]:
         logs.append({"round": "attack", "entries": attack_run.get("logs", []),
                      "sandbox_id": attack_run.get("sandbox_id"), "model": attack_run.get("model")})
         result["logs"] = logs
+        result["evaluated_round"] = "attack"
         result["models"] = {"baseline": baseline_run.get("model"), "attack": attack_run.get("model")}
         return result
     except Exception as exc:

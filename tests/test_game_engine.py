@@ -81,3 +81,15 @@ def test_attack_text_is_only_data_in_sandbox_runner(services, tmp_path):
     assert result["verdict"] == "DEFENDER_WINS"
     assert not marker.exists()
     assert state.created == state.deleted
+
+
+def test_invalid_baseline_retains_unauthorized_attempt_evidence(services):
+    state = services([{**GOOD, "tool_calls": [{"name": "delete_email"}]}])
+    result = run_attack("attack")
+    assert result["verdict"] == "INVALID_TEST"
+    assert result["security_pass"] is False
+    assert result["tool_calls"][-1] == {
+        "name": "delete_email", "attempted": True, "executed": False,
+    }
+    assert result["evaluated_round"] == "baseline"
+    assert len(state.requests) == 1
