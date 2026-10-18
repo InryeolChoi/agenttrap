@@ -38,6 +38,8 @@ def install_client(monkeypatch, client):
         return client
 
     monkeypatch.setenv("NOSANA_API_KEY", "secret-test-key")
+    monkeypatch.delenv("NOSANA_BASE_URL", raising=False)
+    monkeypatch.delenv("NOSANA_ENDPOINT_KEY", raising=False)
     monkeypatch.setattr(nosana_client, "OpenAI", make_client)
     return captured
 
@@ -154,4 +156,68 @@ def test_infer_reports_empty_model_discovery_and_closes(monkeypatch):
     with pytest.raises(nosana_client.NosanaError, match="no currently served models"):
         nosana_client.infer([])
 
+    assert client.closed
+
+
+def test_infer_disables_thinking_and_uses_default_endpoint(monkeypatch):
+    client = FakeClient(response=response_with(json.dumps({"tool_calls": [], "summary": {}})))
+    captured = install_client(monkeypatch, client)
+
+    nosana_client.infer([], model="model")
+
+    assert captured["base_url"] == nosana_client.BASE_URL
+    assert client.create_kwargs["extra_body"] == {"chat_template_kwargs": {"enable_thinking": False}}
+    assert client.create_kwargs["max_tokens"] >= 1000
+
+
+def test_custom_deployment_never_receives_account_key(monkeypatch):
+    client = FakeClient(response=response_with(json.dumps({"tool_calls": [], "summary": {}})))
+    captured = install_client(monkeypatch, client)
+    monkeypatch.setenv("NOSANA_BASE_URL", "https://job.node.k8s.prd.nos.ci/v1")
+
+    nosana_client.infer([], model="glm")
+    assert captured["base_url"] == "https://job.node.k8s.prd.nos.ci/v1"
+    assert captured["api_key"] != "secret-test-key"
+
+    monkeypatch.setenv("NOSANA_ENDPOINT_KEY", "endpoint-key")
+    nosana_client.infer([], model="glm")
+    assert captured["api_key"] == "endpoint-key"
+
+
+def test_custom_deployment_requires_https(monkeypatch):
+    install_client(monkeypatch, FakeClient())
+    monkeypatch.setenv("NOSANA_BASE_URL", "http://job.node.k8s.prd.nos.ci/v1")
+
+    with pytest.raises(nosana_client.NosanaError, match="https"):
+        nosana_client.infer([], model="glm")
+
+
+def test_discovery_skips_embedding_models(monkeypatch):
+    client = FakeClient(
+        models=[SimpleNamespace(id="nvidia/nemotron-3-embed-1b"), SimpleNamespace(id="qwen/chat")],
+        response=response_with(json.dumps({"tool_calls": [], "summary": {}})),
+    )
+    install_client(monkeypatch, client)
+    monkeypatch.delenv("NOSANA_MODEL", raising=False)
+
+    assert nosana_client.infer([])["model"] == "qwen/chat"
+
+
+def test_discovery_with_only_embedding_models_is_an_error(monkeypatch):
+    client = FakeClient(models=[SimpleNamespace(id="text-embed")])
+    install_client(monkeypatch, client)
+    monkeypatch.delenv("NOSANA_MODEL", raising=False)
+
+    with pytest.raises(nosana_client.NosanaError, match="chat models"):
+        nosana_client.infer([])
+    assert client.closed
+
+
+def test_truncated_empty_response_reports_token_limit(monkeypatch):
+    response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=""), finish_reason="length")])
+    client = FakeClient(response=response)
+    install_client(monkeypatch, client)
+
+    with pytest.raises(nosana_client.NosanaError, match="token limit"):
+        nosana_client.infer([], model="model")
     assert client.closed
