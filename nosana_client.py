@@ -115,7 +115,7 @@ def list_models() -> list[str]:
     return models
 
 
-def infer(emails: list[dict[str, str]], *, model: str | None = None) -> dict[str, Any]:
+def infer(emails: list[dict[str, str]], *, model: str | None = None, system_prompt: str | None = None) -> dict[str, Any]:
     client = _client()
     error: NosanaError | None = None
     result: dict[str, Any] | None = None
@@ -131,7 +131,7 @@ def infer(emails: list[dict[str, str]], *, model: str | None = None) -> dict[str
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt if system_prompt is not None else SYSTEM_PROMPT},
                 {"role": "user", "content": "Summarize these emails as JSON:\n" + json.dumps(emails, ensure_ascii=False)},
             ],
             max_tokens=MAX_TOKENS,

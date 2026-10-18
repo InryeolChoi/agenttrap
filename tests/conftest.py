@@ -10,7 +10,7 @@ import pytest
 @pytest.fixture
 def services(monkeypatch):
     def configure(decisions):
-        state = SimpleNamespace(created=[], deleted=[], requests=[], decisions=iter(decisions))
+        state = SimpleNamespace(created=[], deleted=[], requests=[], decisions=iter(decisions), cleanup_error=None)
 
         class Process:
             def code_run(self, source, timeout):
@@ -27,6 +27,8 @@ def services(monkeypatch):
                 state.created.append(self.id)
 
             def delete(self, wait=False, timeout=None):
+                if state.cleanup_error is not None:
+                    raise state.cleanup_error
                 state.deleted.append(self.id)
 
         import daytona

@@ -4,6 +4,7 @@ import base64
 from contextlib import contextmanager
 import json
 import os
+import time
 from typing import Any, Callable
 
 from dotenv import load_dotenv
@@ -46,19 +47,24 @@ class RuntimeErrorDetail(RuntimeError):
     pass
 
 
-@contextmanager
-def _sandbox_session():
+def _create_sandbox(*, persistent=False):
     if not os.getenv("DAYTONA_API_KEY"):
         raise RuntimeErrorDetail("DAYTONA_API_KEY is not configured")
     from daytona import CreateSandboxFromSnapshotParams, Daytona
 
     try:
-        sandbox = Daytona().create(params=CreateSandboxFromSnapshotParams(
+        return Daytona().create(params=CreateSandboxFromSnapshotParams(
             language="python", public=False, network_block_all=True,
-            auto_stop_interval=1, auto_delete_interval=1, ttl_minutes=5,
+            auto_stop_interval=0 if persistent else 1,
+            auto_delete_interval=0 if persistent else 1, ttl_minutes=5,
         ), timeout=45)
     except Exception as exc:
         raise RuntimeErrorDetail(f"Daytona creation failed: {type(exc).__name__}") from exc
+
+
+@contextmanager
+def _sandbox_session():
+    sandbox = _create_sandbox()
     failure = None
     try:
         yield sandbox
@@ -106,27 +112,87 @@ def run_round_in_daytona(
 ) -> dict[str, Any]:
     """Read in Daytona, infer on the host, record actions, and confirm cleanup."""
     with _sandbox_session() as sandbox:
-        read_result = _run_json(sandbox, _data_source(_READ_RUNNER, {"emails": emails}))
-        decision = infer_callback(read_result["emails"])
-        calls = decision.get("tool_calls", [])
-        if not isinstance(calls, list) or len(calls) > MAX_STEPS:
-            raise RuntimeErrorDetail("Defender exceeded the maximum 5 tool calls")
-        if any(not isinstance(call, dict) or not isinstance(call.get("name"), str)
-               or not 1 <= len(call["name"]) <= 80 for call in calls):
-            raise RuntimeErrorDetail("Defender tool calls must have valid names")
-        summary = decision.get("summary", {})
-        if (not isinstance(summary, dict) or len(summary) > 10
-                or any(not isinstance(value, str) or len(value) > 500 for value in summary.values())):
-            raise RuntimeErrorDetail("Defender summary must contain bounded string values")
-        result = _run_json(sandbox, _data_source(_ACTION_RUNNER, {
-            "read_records": read_result["tool_calls"],
-            "tool_calls": [{"name": call["name"]} for call in calls],
-            "summary": summary,
-        }))
-        result["model"] = decision.get("model")
-        result["sandbox_id"] = sandbox.id
+        result = _execute_round(sandbox, emails, infer_callback)
     result["cleanup_status"] = "DELETED"
     return result
+
+
+def _execute_round(sandbox, emails, infer_callback):
+    read_result = _run_json(sandbox, _data_source(_READ_RUNNER, {"emails": emails}))
+    decision = infer_callback(read_result["emails"])
+    calls = decision.get("tool_calls", [])
+    if not isinstance(calls, list) or len(calls) > MAX_STEPS:
+        raise RuntimeErrorDetail("Defender exceeded the maximum 5 tool calls")
+    if any(not isinstance(call, dict) or not isinstance(call.get("name"), str)
+           or not 1 <= len(call["name"]) <= 80 for call in calls):
+        raise RuntimeErrorDetail("Defender tool calls must have valid names")
+    summary = decision.get("summary", {})
+    if (not isinstance(summary, dict) or len(summary) > 10
+            or any(not isinstance(value, str) or len(value) > 500 for value in summary.values())):
+        raise RuntimeErrorDetail("Defender summary must contain bounded string values")
+    result = _run_json(sandbox, _data_source(_ACTION_RUNNER, {
+        "read_records": read_result["tool_calls"],
+        "tool_calls": [{"name": call["name"]} for call in calls],
+        "summary": summary,
+    }))
+    result["model"] = decision.get("model")
+    result["sandbox_id"] = sandbox.id
+    return result
+
+
+class LevelSession:
+    """One lazy, bounded sandbox per level; call close on level transition."""
+
+    def __init__(self, level_id: int):
+        from levels import get_level
+        get_level(level_id)
+        self.level_id = level_id
+        self._sandbox = None
+        self._started = None
+        self.closed = False
+        self._failed = False
+
+    @property
+    def failed(self):
+        return self._failed
+
+    @property
+    def expired(self):
+        return self._started is not None and time.monotonic() - self._started >= 240
+
+    def run_round(self, emails, infer_callback):
+        if self.closed or self._failed:
+            raise RuntimeErrorDetail('Level sandbox is closed; start a new level session')
+        if self.expired:
+            self.close()
+            raise RuntimeErrorDetail('Level sandbox expired; start a new level session')
+        try:
+            if self._sandbox is None:
+                self._started = time.monotonic()
+                self._sandbox = _create_sandbox(persistent=True)
+            result = _execute_round(self._sandbox, emails, infer_callback)
+            result['cleanup_status'] = 'RETAINED_FOR_LEVEL'
+            return result
+        except Exception as exc:
+            self._failed = True
+            try:
+                self.close()
+            except Exception as cleanup:
+                exc.add_note(str(cleanup))
+            raise
+
+    def close(self):
+        if self.closed:
+            return
+        if self._sandbox is not None:
+            try:
+                self._sandbox.delete(wait=True, timeout=30)
+            except Exception as exc:
+                from daytona import DaytonaNotFoundError
+                if not isinstance(exc, DaytonaNotFoundError):
+                    self._failed = True
+                    raise RuntimeErrorDetail(f'Daytona cleanup failed: {type(exc).__name__}') from exc
+        self.closed = True
 
 
 def hello_world() -> dict[str, Any]:

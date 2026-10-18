@@ -43,9 +43,9 @@ def fake_attack(monkeypatch):
     calls = []
 
     def install(result):
-        def run_attack(attack_prompt):
+        def run_attack(attack_prompt, *, level_id=3, session=None):
             calls.append(attack_prompt)
-            return result
+            return {**result, "level_id": level_id}
         monkeypatch.setattr(game_engine, "run_attack", run_attack)
         return calls
     return install
@@ -68,7 +68,7 @@ def texts(elements):
 def test_initial_screen_shows_one_round_without_a_result():
     app = AppTest.from_file(APP).run()
     assert not app.exception
-    assert [button.label for button in app.button] == ["Attack", "Retry"]
+    assert [button.label for button in app.button] == ["Attack", "Retry", "다음 레벨"]
     assert 'class="at-verdict' not in page(app) and 'class="at-pill' not in page(app)
 
 
