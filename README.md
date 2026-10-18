@@ -42,7 +42,9 @@ uv pip install --python .venv/bin/python -r requirements.txt
 cp -n .env.example .env
 ```
 
-`.env`에 `DAYTONA_API_KEY`, `NOSANA_API_KEY`를 입력하세요. `NOSANA_MODEL`은 선택값이며, 비워두면 현재 제공되는 모델을 조회해 선택합니다. 키를 채팅이나 Git에 공유하지 마세요.
+`.env`에 `DAYTONA_API_KEY`, `NOSANA_API_KEY`를 입력하세요. 현재 대상은 Nosana 개별 배포의 `glm-4.7-flash:q4_K_M`입니다. `NOSANA_BASE_URL`에는 배포 주소의 OpenAI 호환 경로(`/v1`)를, `NOSANA_MODEL`에는 해당 모델명을 지정합니다. 예시는 `.env.example`에 있습니다. 배포가 초기화 중이면 HTTP 503이 반환될 수 있습니다. 키를 채팅이나 Git에 공유하지 마세요.
+
+`NOSANA_BASE_URL`을 생략하면 공용 API `https://inference.nosana.com/v1`을 사용합니다. `NOSANA_MODEL`도 생략하면 모델 목록의 첫 항목을 선택하므로, 목표 모델 검증에는 두 값을 명시하세요. 기존 Qwen 실행 기록은 GLM 연결 검증 기록이 아닙니다.
 
 - [Daytona 키 발급 안내](https://www.daytona.io/docs/api-keys/)
 - [Nosana 키 발급 안내](https://learn.nosana.com/api/get-api-key.html)

@@ -74,6 +74,19 @@ def test_infer_discovers_first_available_model_and_closes(monkeypatch):
     assert client.closed
 
 
+def test_infer_uses_deployment_endpoint_and_glm_model_from_environment(monkeypatch):
+    client = FakeClient(response=response_with('{"tool_calls": [], "summary": {}}'))
+    captured = install_client(monkeypatch, client)
+    monkeypatch.setenv("NOSANA_BASE_URL", "https://deployment.example/v1")
+    monkeypatch.setenv("NOSANA_MODEL", "glm-4.7-flash:q4_K_M")
+
+    result = nosana_client.infer([])
+
+    assert captured["base_url"] == "https://deployment.example/v1"
+    assert client.create_kwargs["model"] == "glm-4.7-flash:q4_K_M"
+    assert result["model"] == "glm-4.7-flash:q4_K_M"
+
+
 def test_infer_rejects_empty_output_without_echoing_response(monkeypatch):
     client = FakeClient(response=response_with(""))
     install_client(monkeypatch, client)
