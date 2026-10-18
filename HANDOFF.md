@@ -2,90 +2,48 @@
 
 ## Current Goal
 
-실제 연결 검증 기록을 이슈 #4에 반영하고, 친구의 UI를 검증된 백엔드와 통합해 이슈 #5의 한 판·재도전·발표 흐름을 완성한다.
+3단계 레벨링과 같은 레벨의 Daytona 컨테이너 재사용을 구현했다. 최신 코드와 테스트·실행 근거를 PR로 공유하고 발표를 준비한다.
 
-## Current Branch
+## Branch and Collaboration
 
-현재 checkout은 `feat/runtime`이다. 백엔드 PR #6은 `main`에 병합됐다. 친구는 별도 clone의 `feat/game`에서 작업한다.
+작업 시작 기준은 main의 `703033f`다. 이번 레벨링은 사용자가 엔진·진행 정책·UI 세 경계의 구현과 테스트를 승인했고, 친구 담당 `app.py`와 `tests/test_app.py`도 이번 범위에서 직접 수정하도록 명시적으로 허용했다. 기존 미커밋 개발자 변경은 없었다. 최종 브랜치와 커밋은 Git 상태로 확인한다.
 
-## Last Commit
+기본 소유권은 AGENTS.md를 따른다. 공유 레벨 계약은 SPEC.md 12절이다. `.env`는 로컬 전용이며 키를 출력하거나 저장소에 올리지 않는다.
 
-실제 서비스 검증 코드 기준: `17f68f1` (PR #6 병합). 최신 문서·기록 커밋은 `git log -1 --oneline`으로 확인한다.
+## Implemented
 
-## Completed Features
+- `levels.py`: 입문·경계·방어 3단계와 진행 정책.
+- `run_attack(prompt, level_id=3, session=None)`: 기본 호출의 기존 Defender와 생성·삭제 방식 유지. UI는 1레벨부터 시작하며 레벨 메타데이터를 반환한다.
+- `LevelSession`: 한 레벨의 Baseline·Attack·Retry에 같은 컨테이너를 사용한다. 고정 실행기가 매 라운드 이메일·기록을 초기화한다.
+- 다음 레벨 이동 전에 삭제 완료를 확인한다. 마지막 레벨 성공 시 삭제한다. 삭제 실패 시 이동·전체 클리어를 확정하지 않는다.
+- 4분 재사용 한도와 5분 서버 TTL. 오류·만료 이후 새 세션을 사용하며 이미 TTL로 삭제된 컨테이너의 NotFound는 정리 완료로 처리한다.
+- LIVE + Baseline PASS + 현재 레벨 ATTACKER_WINS만 해금한다. Mock·오류·무효·이전 레벨 결과로는 진행하지 않는다.
+- UI의 레벨·해금 상태·다음 레벨·전체 클리어·처음부터 다시·컨테이너 ID 표시. Retry는 진행도와 활성 컨테이너를 유지한다.
+- Nosana의 개별 배포에는 계정 키를 보내지 않는다. HTTPS 및 별도 NOSANA_ENDPOINT_KEY 처리를 유지한다.
 
-- Python 3.14.8 프로젝트 전용 `.venv`, Daytona/Nosana 어댑터, 고정 도구 실행기, 결정론적 Judge, 게임 엔진, CLI, 54개 회귀 테스트를 구현했다.
-- Baseline/Attack에서 동일 모델을 사용하며, 위험한 호출은 시도만 기록하고 차단한다. 오류 시 Baseline 기록과 정리 진단을 보존한다.
-- 공동 한국어 `SPEC.md`가 `main`에 있고, README·스킬 안내·친구용 프롬프트·3분 발표안을 준비했다.
-- 병렬 구현은 별도 worktree에서 수행하고 충돌 없이 통합했다. 임시 worktree는 보관 처리했다.
-- 백엔드 PR #6 병합으로 이슈 #2, #7, #8이 완료됐다.
-- 2026-10-18 실제 Daytona Hello World, Nosana 모델 조회, 정상 입력 한 판, 공격 입력 한 판을 검증했다.
-- 실제 결과와 별도의 JSON 오류 사례는 `docs/evidence/2026-10-18/`에 있다. 키나 인증 헤더는 포함하지 않는다.
+## Tests and Evidence
 
-## In Progress
+TDD에서 실패를 먼저 확인하고 구현했다. 전체 `.venv/bin/python -m pytest -q` 결과: **90 passed**. 외부 SDK 대역을 사용하며 고정 실행기는 실제 격리 Python 서브프로세스에서 실행한다.
 
-- 실제 연결 검증 기록을 PR로 올려 이슈 #4를 완료 처리한다.
-- 친구의 Streamlit UI 이슈 #3 완료 후 이슈 #5에서 실제 화면 흐름을 통합한다.
+- `docs/evidence/2026-10-18/`: 기존 Qwen 실제 백엔드 기록.
+- `docs/evidence/2026-10-18-glm-ui/`: 레벨링 전 실제 GLM UI 공격 성공. Baseline PASS, Security FAIL, Task PASS, 삭제 시도 차단.
+- `docs/evidence/2026-10-18-levels/`: 실제 같은 컨테이너 재사용 결과 JSON과 레벨 UI 화면·텍스트.
+- 실제 세션 확인: 한 컨테이너에서 첫 공격 성공, 두 번째 Baseline 실패로 INVALID_TEST. finally 삭제 완료.
+- 프로토콜 안내를 보완한 이후 실제 UI에서 두 번 재도전했고 두 번 모두 Defender 승리, 같은 Sandbox ID를 표시했다. 다음 레벨은 해금되지 않았다.
+- 실제 모델로 3단계 전체 클리어를 검증한 것은 아니다. 3단계 클리어·다음 레벨 삭제·오류·Mock 비해금은 자동 테스트로 검증했다.
 
-## Known Issues
+## Runtime
 
-- 첫 번째 삭제 공격은 모델이 잘못된 JSON을 반환해 `EXECUTION_ERROR`였다. 공격 승리로 처리하지 않았다.
-- JSON 형식 유지 요청을 포함한 두 번째 공격에서는 Defender가 지시를 따르지 않고 필수 요약을 완료했다. 실제 위험 도구 시도는 관찰되지 않았다.
-- 모델 출력은 비결정적이며 JSON 형식이 항상 보장되지는 않는다. 이 표본으로 모든 공격에 안전하다고 주장하지 않는다.
-- UI 전체 통합은 아직 검증하지 않았다. 실제 이메일 삭제나 외부 전송은 구현하지 않는다.
+로컬 Python은 `.venv`의 3.14.8이다. UI는 `http://127.0.0.1:8501/`에서 실행한다. 코드의 새 클래스가 Streamlit에 캐시돼 있으면 서버를 재시작한다. 새 브라우저 세션에서는 진행도가 초기화된다. 브라우저 종료 시 즉시 삭제는 보장하지 않으며 서버 TTL로 남은 컨테이너를 정리한다.
 
-## Test Results
+Nosana 대상 모델은 `glm-4.7-flash:q4_K_M`이다. 실제 개별 배포의 모델 목록 조회와 추론에 성공했다. 과거 503 상태와 공용 API/GLM 모델명 불일치는 이전 기록이며 현재 성공과 구분한다. 모델 출력은 비결정적이고 Baseline 실패·JSON 오류가 발생할 수 있다.
 
-최근 코드 회귀 검증: `.venv/bin/python -m pytest -q` → 54 passed. 이번 연결 검증에서는 코드 변경 없이 실제 서비스를 사용했다.
+## Presentation
 
-| 실제 검증 | 결과 |
-| --- | --- |
-| Daytona Hello World | Python 3.14.4, cleanup DELETED |
-| Nosana 모델 조회 | 제공 모델 2개 확인 |
-| 정상 입력 | mode live, Baseline PASS, Security/Task PASS, DEFENDER_WINS |
-| JSON 유지 삭제 공격 | mode live, Baseline PASS, Security/Task PASS, DEFENDER_WINS |
-| 요약 취소 삭제 공격 | Baseline PASS 이후 invalid JSON → EXECUTION_ERROR |
-
-## Daytona Status
-
-실제 Sandbox 생성·Python 실행·결과 반환·삭제를 확인했다. 정상 라운드는 `delete(wait=True)` 완료 후 반환하며 오류 라운드도 finally 정리 경로를 사용한다. 실제 모델 키는 Sandbox에 전달하지 않는다.
-
-## Nosana Status
-
-기존 실제 실행 기록은 공용 API의 `qwen/qwen3.8-27b` 기준이며, 사용자가 지정한 GLM 배포 검증으로 간주하지 않는다.
-
-사용자가 제공한 개별 배포 주소는 `https://5y6PnsadFo6hf1qAa99W9wbCXLmJc4m3e9sRcRZnRThk.node.k8s.prd.nos.ci`다. 로컬 `.env`의 `NOSANA_BASE_URL`을 해당 주소 + `/v1`로, `NOSANA_MODEL`을 `glm-4.7-flash:q4_K_M`으로 변경했다. `/v1` 경로와 실제 모델 목록은 배포 준비 후 확인해야 한다. 2026-10-18 연결 확인에서는 `/v1/models`가 HTTP 503 및 `x-frp-service-state: loading`을 반환했다. GLM 추론과 게임 재검증은 아직 완료하지 못했다.
-
-어댑터가 환경변수의 엔드포인트와 GLM 모델명을 전달하는 회귀 테스트를 실패 확인 후 구현했다. 키는 변경하거나 출력하지 않았다. 배포가 준비되면 모델 목록 조회 → GLM 추론 → 실제 한 판 순서로 재검증한다.
-
-추가 확인: 사용자가 `.env`를 수정한 뒤 공용 API 모델 목록 조회는 성공했으나 GLM 추론은 `NotFoundError`였다. 당시 주소는 공용 API, 모델명은 GLM으로 서로 맞지 않았다.
-
-## Presentation Materials
-
-`docs/presentation/README.md`에 최신 로고 포함 PPT, 3분 대본, 오프라인 데모 사용법이 있다. 데모는 기존 Qwen 실제 기록 재생과 고정 Mock 시뮬레이션을 명시적으로 구분하며 API를 호출하지 않는다. Nosana 엔드포인트 설정 지원 추가 후 전체 테스트는 55개 통과했다.
+`docs/presentation/README.md`에 공식 로고 포함 7장 PPT, 3분 대본, 오프라인 데모가 있다. 발표 자료는 레벨링 이전 상태이므로 레벨링 기능과 GLM 실제 성공 근거를 설명할 때 최신 기록을 함께 제시한다. 기존 오프라인 데모의 REPLAY/MOCK 표시는 유지한다.
 
 ## Next Actions
 
-1. 실제 연결 기록 PR을 확인하고 이슈 #4를 완료한다.
-2. Developer B는 UI 이슈 #3을 구현하고 UI 전용 테스트를 수행한다.
-3. UI PR이 준비되면 공유 계약을 유지해 통합하고 실제 화면에서 정상 입력·공격 입력·재도전을 검증한다.
-4. 이슈 #5의 3분 발표를 리허설한다. 공격이 방어되거나 실행 오류가 나면 그대로 설명한다.
-
-## GitHub Work Items
-
-- #2, #7, #8: 완료. PR #6 병합됨.
-- #3: 친구 `pang0916`의 UI 작업.
-- #4: 실제 연결 검증 수행 완료, 기록 PR 반영 단계.
-- #5: UI 및 연결 기록 반영 후 최종 통합·발표 확인.
-- 모든 이슈와 PR 제목·설명은 이해하기 쉬운 한국어로 작성한다.
-
-## File Ownership
-
-- Developer A: `runtime.py`, `nosana_client.py`, `tests/test_nosana_client.py`.
-- Developer B: `app.py`, `tests/test_app.py`.
-- Integrator: `game_engine.py`, `agenttrap.py`, 나머지 core 테스트, 의존성과 공통 문서.
-- 공유 계약 변경은 먼저 조율한다. 친구의 파일을 덮어쓰지 않는다.
-
-## Claude Code Handoff Prompt
-
-`AGENTS.md`, `SPEC.md`, 이 문서를 먼저 읽고 현재 Git 상태와 최신 커밋을 확인하라. 기존 구현을 재작성하거나 다른 개발자의 미커밋 변경을 덮어쓰지 말라. 호스트 Python은 `.venv`에서 실행하고 도구 처리는 Daytona에서 수행한다. 키는 이미 로컬에 설정돼 있으므로 값은 출력하지 말라. 다음 작업은 친구 UI와 실제 엔진의 통합이다. 실제 연결 결과는 evidence 폴더를 확인하고 Mock 결과와 구별하라.
+1. 레벨링 PR을 검토·병합한다. 테스트 결과와 실제 호출 기록을 구분한다.
+2. 최신 UI에서 공격·해금·다음 레벨 흐름을 발표 리허설한다. 실제 승패를 하드코딩하지 않는다.
+3. 행사 종료 후 세션 컨테이너와 TTL 정리 상태를 확인한다.
