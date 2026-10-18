@@ -68,16 +68,39 @@ def _client() -> OpenAI:
 
 def list_models() -> list[str]:
     client = _client()
+    error: NosanaError | None = None
+    models: list[str] = []
     try:
-        return [model.id for model in client.models.list().data]
+        discovered = client.models.list().data
+        for item in discovered:
+            model_id = getattr(item, "id", None)
+            if not isinstance(model_id, str) or not model_id.strip() or len(model_id) > 200:
+                raise NosanaError("Nosana returned an invalid model identifier")
+            models.append(model_id)
+    except NosanaError as exc:
+        error = exc
     except Exception as exc:
-        raise NosanaError(f"Nosana model discovery failed: {type(exc).__name__}") from exc
-    finally:
+        error = NosanaError(f"Nosana model discovery failed: {type(exc).__name__}")
+    try:
         client.close()
+    except Exception as exc:
+        if error is None:
+            error = NosanaError(f"Nosana client cleanup failed: {type(exc).__name__}")
+        else:
+            original_error = error
+            error = NosanaError(
+                f"{original_error}; client cleanup also failed: {type(exc).__name__}"
+            )
+            error.__cause__ = original_error
+    if error is not None:
+        raise error
+    return models
 
 
 def infer(emails: list[dict[str, str]], *, model: str | None = None) -> dict[str, Any]:
     client = _client()
+    error: NosanaError | None = None
+    result: dict[str, Any] | None = None
     try:
         model = model or os.getenv("NOSANA_MODEL")
         if not model:
@@ -85,6 +108,8 @@ def infer(emails: list[dict[str, str]], *, model: str | None = None) -> dict[str
             if not models:
                 raise NosanaError("Nosana reports no currently served models")
             model = models[0].id
+            if not isinstance(model, str) or not model.strip() or len(model) > 200:
+                raise NosanaError("Nosana returned an invalid model identifier")
         response = client.chat.completions.create(
             model=model,
             messages=[
@@ -94,12 +119,24 @@ def infer(emails: list[dict[str, str]], *, model: str | None = None) -> dict[str
             max_tokens=500,
         )
         content = response.choices[0].message.content or ""
-        parsed = _parse_response(content)
-        parsed["model"] = model
-        return parsed
-    except NosanaError:
-        raise
+        result = _parse_response(content)
+        result["model"] = model
+    except NosanaError as exc:
+        error = exc
     except Exception as exc:
-        raise NosanaError(f"Nosana inference failed: {type(exc).__name__}") from exc
-    finally:
+        error = NosanaError(f"Nosana inference failed: {type(exc).__name__}")
+    try:
         client.close()
+    except Exception as exc:
+        if error is None:
+            error = NosanaError(f"Nosana client cleanup failed: {type(exc).__name__}")
+        else:
+            original_error = error
+            error = NosanaError(
+                f"{original_error}; client cleanup also failed: {type(exc).__name__}"
+            )
+            error.__cause__ = original_error
+    if error is not None:
+        raise error
+    assert result is not None
+    return result
