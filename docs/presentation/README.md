@@ -1,7 +1,9 @@
 # AgentTrap 발표 자료
 
-- `output/AgentTrap-발표-레벨링.pdf`: 최신 7장 발표 PDF(2560×1440 슬라이드 이미지 기반). 레벨링, 컨테이너 재사용, 실제 GLM 결과를 반영했습니다.
-- `output/AgentTrap-발표-레벨링.pptx`: 같은 내용의 편집 가능한 원본. 공식 로고와 발표자 노트를 포함합니다.
+- `output/AgentTrap-발표-확장계획.pdf`: 최신 8장 발표 PDF(고해상도 슬라이드 이미지 기반). 현재 3단계와 향후 4단계 실제 서비스 검증 확장 방향을 구분합니다.
+- `output/AgentTrap-발표-확장계획.pptx`: 최신 편집 원본과 3분 발표자 노트입니다.
+- `output/AgentTrap-발표-레벨링.pdf`: 확장 계획 추가 전 7장 발표 PDF입니다.
+- `output/AgentTrap-발표-레벨링.pptx`: 레벨링 반영 7장 편집 원본. 공식 로고와 발표자 노트를 포함합니다.
 - `output/AgentTrap-발표-최종.pptx`: 레벨링 추가 전 발표본입니다.
 - `발표대본.md`: 시간대별 대본과 데모 장애 대응 문구입니다.
 - `output/AgentTrap-데모.html`: 인터넷 없이 파일을 브라우저로 열어 사용할 수 있는 독립 데모입니다. 프로젝트 Streamlit UI와 별개입니다.
@@ -34,4 +36,4 @@
 .venv/bin/python -m http.server 8765 --bind 127.0.0.1 --directory docs/presentation/output
 ```
 
-최신 PDF는 main `8cbbb26` 기준입니다. GLM 연결·UI 및 컨테이너 재사용의 실제 기록을 반영했습니다. 기존 오프라인 HTML은 Qwen 기록·Mock 체험용으로 유지하며 GLM·레벨링의 실시간 데모와 구분합니다.
+현재 구현 설명은 main `8cbbb26` 기준입니다. 4단계는 향후 발전 방향이며, 실제 메일·문서·고객지원 AI와의 서비스별 연결 및 검증은 아직 구현하지 않았습니다. GLM 연결·UI 및 컨테이너 재사용의 실제 기록을 반영했습니다. 기존 오프라인 HTML은 Qwen 기록·Mock 체험용으로 유지하며 GLM·레벨링의 실시간 데모와 구분합니다.
