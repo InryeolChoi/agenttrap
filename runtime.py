@@ -69,7 +69,7 @@ def _sandbox_session():
         try:
             sandbox.delete(wait=True, timeout=30)
         except Exception as exc:
-            message = f"Daytona cleanup failed for {sandbox.id}: {type(exc).__name__}"
+            message = f"Daytona cleanup failed: {type(exc).__name__}"
             if failure is not None:
                 failure.add_note(message)
             else:
