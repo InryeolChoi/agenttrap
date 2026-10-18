@@ -19,7 +19,7 @@
 - 프로젝트 전용 `.venv`, pytest, Claude Code 인수인계 스크립트
 - 키 상태 점검, 모델 목록, Daytona Hello World, 게임 JSON 실행용 CLI
 
-Streamlit UI는 친구가 `feat/game`에서 구현합니다. 실제 Nosana 추론과 Daytona 실행은 API 키 설정 후 검증해야 합니다. 자동 테스트의 서비스 대역은 실제 서비스 실행 증거가 아닙니다.
+Streamlit UI는 친구가 `feat/game`에서 구현합니다. 실제 Nosana 추론·Daytona 실행으로 정상 입력과 공격 입력을 검증했고, [실행 기록](docs/evidence/2026-10-18/README.md)에 결과를 남겼습니다. UI 전체 통합은 아직 진행 중입니다. 자동 테스트의 서비스 대역과 실제 서비스 기록은 구별합니다.
 
 ## 실행 구조
 
