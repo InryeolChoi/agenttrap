@@ -40,7 +40,7 @@ Nosana 대상 모델은 `glm-4.7-flash:q4_K_M`이다. 실제 개별 배포의 �
 
 ## Presentation
 
-`docs/presentation/README.md`에 공식 로고 포함 7장 PPT, 3분 대본, 오프라인 데모가 있다. 최신 `AgentTrap-발표-레벨링.pdf`와 편집 원본 PPTX·대본에 레벨링 및 GLM 실제 성공 근거를 반영했다. `docs/TEST_SUMMARY.md`는 중간 89개와 최종 90개 검증 범위를 요약한다. 기존 오프라인 데모의 REPLAY/MOCK 표시는 유지한다.
+`docs/presentation/README.md`에 공식 로고 포함 7장 PPT, 3분 대본, 오프라인 데모가 있다. 최신 `AgentTrap-발표-확장계획.pdf`(8장)와 편집 원본 PPTX·대본에 레벨링 및 GLM 실제 성공 근거, 향후 4단계 실제 서비스 검증을 반영했다. 4단계는 발전 방향이며 현재 게임의 구현 범위는 3단계다. `docs/TEST_SUMMARY.md`는 중간 89개와 최종 90개 검증 범위를 요약한다. 기존 오프라인 데모의 REPLAY/MOCK 표시는 유지한다.
 
 ## Next Actions
 
