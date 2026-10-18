@@ -7,7 +7,7 @@ Connect a real Nosana Defender decision to Daytona sandbox tool execution and re
 Current checkout: `feat/runtime`. `main` is the shared integration baseline; Developer B uses `feat/game` in a separate checkout.
 
 ## Last Commit
-Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identify the current immutable commit.
+Latest integrated implementation checkpoint: `c12f14e`. Use `git log -1 --oneline` for the latest documentation/checkpoint commit.
 
 ## Completed Features
 - Inspected environment: macOS ARM64; Python 3.9.6 (below requested 3.11); Git, `gh`, Codex CLI, Claude Code, and `uv` are installed.
@@ -19,6 +19,8 @@ Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identif
 - Completed CLI (`python -m agenttrap check|models|hello|play`), same-model baseline comparison, baseline failure short-circuit, preserved baseline evidence on attack errors, bounded network-blocked sandboxes and cleanup diagnostics. `hello` and `play` require explicit `--live`.
 - Suitable installed skills are recorded in `docs/SKILLS.md`; fixed backend acceptance criteria are in `docs/specs/runtime.md`.
 - Two-axis review completed: Standards 0 findings; Spec 1 finding fixed by preserving baseline tool evidence in invalid results. See `docs/REVIEW.md`. Three-minute presentation draft is in `docs/DEMO.md`.
+- Shared Korean MVP specification is published on `main` as `SPEC.md` (commit `13a6f6a`).
+- Parallel work for #7 (Nosana failures) and #8 (Sandbox lifecycle) was committed in separate worktrees and merged without conflicts. Final review found no spec defects; test ownership documentation was clarified.
 - Checked current official docs: Daytona SDK uses `Daytona()`, `daytona.create()`, `sandbox.process.code_run(...)`, and `sandbox.delete()`; Nosana base URL is `https://inference.nosana.com/v1`, with `/models` for live models.
 
 ## In Progress
@@ -35,7 +37,7 @@ Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identif
 - Do not claim the acceptance criteria are complete until live API execution and tests succeed.
 
 ## Test Results
-`.venv/bin/python -m pytest -q` → 27 passed. Red/green regressions cover preflight, dropped tool calls, lost baseline evidence, error attribution, and CLI execution guards. External-service doubles execute the fixed Python runner locally; game outcomes and attack text remaining data are also tested. `python -m agenttrap check` reports both keys missing. No live integration checks have been performed.
+`.venv/bin/python -m pytest -q` → 54 passed after merging both parallel implementations. Public SDK-boundary tests cover provider validation, primary/cleanup error preservation, sandbox creation/execution/output/deletion failures, limits and key isolation, plus full game outcomes and CLI guards. `python -m agenttrap check` reports both keys missing. No live integration checks have been performed.
 
 ## Daytona Status
 SDK call pattern confirmed against current official documentation; API key missing; sandbox creation not attempted.
@@ -56,12 +58,14 @@ OpenAI-compatible endpoint confirmed against current official docs; API key miss
 - #3: UI round with mock results, assigned to `pang0916`, can start immediately.
 - #4: real Nosana/Daytona validation, blocked by #2 and missing credentials/cost approval.
 - #5: live UI integration and presentation rehearsal, blocked by #3 and #4.
+- #7 and #8: parallel backend failure-path validation implemented and merged into `feat/runtime`; resolved by PR #6 when merged.
+- PR #6 contains the reviewed backend and closes #2, #7, #8. Live validation remains separate in #4.
 - All issue and PR titles and descriptions must be understandable Korean.
 
 ## File Ownership
-- Developer A: `runtime.py`, `nosana_client.py`.
+- Developer A: `runtime.py`, `nosana_client.py`, `tests/test_nosana_client.py`.
 - Developer B: `app.py`, `tests/test_app.py`; see `docs/FRIEND_AGENT_PROMPT.md`.
-- Integrator: `game_engine.py`, `tests/test_runtime.py`, requirements and docs.
+- Integrator: `game_engine.py`, `agenttrap.py`, remaining core tests, requirements and docs.
 - Shared contract changes require coordination.
 
 ## Claude Code Handoff Prompt
