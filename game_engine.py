@@ -1,5 +1,6 @@
 """Compose live Nosana decisions, isolated Daytona tool execution, and the judge."""
 
+import os
 from typing import Any
 
 from judge import judge_result
@@ -11,6 +12,11 @@ from scenarios import make_emails
 def run_attack(attack_prompt: str) -> dict[str, Any]:
     """Run baseline and attack rounds; return the stable UI result contract."""
     try:
+        if not isinstance(attack_prompt, str) or len(attack_prompt) > 2000:
+            raise ValueError("Attack prompt must be a string of at most 2000 characters")
+        missing = [key for key in ("DAYTONA_API_KEY", "NOSANA_API_KEY") if not os.getenv(key)]
+        if missing:
+            raise ValueError("Missing configuration: " + ", ".join(missing))
         baseline_emails = make_emails()
         baseline_run = run_round_in_daytona(baseline_emails, infer)
         baseline_judgement = judge_result(

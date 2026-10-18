@@ -4,7 +4,7 @@
 Connect a real Nosana Defender decision to Daytona sandbox tool execution and return one result JSON. Then run the specified pytest checks and integrate the independently owned UI.
 
 ## Current Branch
-`main` is the shared integration baseline. Developer A uses `feat/runtime`; Developer B uses `feat/game`, each in a separate checkout.
+Current checkout: `feat/runtime`. `main` is the shared integration baseline; Developer B uses `feat/game` in a separate checkout.
 
 ## Last Commit
 Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identify the current immutable commit.
@@ -15,6 +15,7 @@ Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identif
 - Added Nosana inference adapter with dynamic model discovery, JSON parsing/validation, and key kept on orchestrator.
 - Added Daytona runner that reads emails inside the sandbox, sends only returned email data to host-side Nosana inference, records blocked tool attempts, limits steps/time/output, and deletes its sandbox.
 - Added deterministic Judge, fixed scenario data, game engine, UI result mock, tests, and Claude continuation script.
+- README is now in Korean. Runtime preflight rejects missing credentials before creating a sandbox; oversized tool plans and malformed summary values are execution errors instead of silently truncating/coercing model output.
 - Checked current official docs: Daytona SDK uses `Daytona()`, `daytona.create()`, `sandbox.process.code_run(...)`, and `sandbox.delete()`; Nosana base URL is `https://inference.nosana.com/v1`, with `/models` for live models.
 
 ## In Progress
@@ -31,7 +32,7 @@ Bootstrap checkpoint containing this file. Use `git log -1 --oneline` to identif
 - Do not claim the acceptance criteria are complete until live API execution and tests succeed.
 
 ## Test Results
-`PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q` → 12 passed. `streamlit --version` → 1.66.0. Live integration checks are not run because API keys are missing.
+`.venv/bin/python -m pytest -q` → 14 passed, including reproduced red/green regressions for missing-key sandbox creation and silently dropped tool calls. External-service doubles execute the fixed Python runner locally. Live integration checks are not run because API keys are missing.
 
 ## Daytona Status
 SDK call pattern confirmed against current official documentation; API key missing; sandbox creation not attempted.
